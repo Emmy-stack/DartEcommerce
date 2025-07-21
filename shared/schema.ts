@@ -66,9 +66,7 @@ export const favorites = pgTable("favorites", {
   userId: varchar("user_id").notNull(),
   productId: integer("product_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  primaryKey({ columns: [table.userId, table.productId] })
-]);
+});
 
 export const cartItems = pgTable("cart_items", {
   id: serial("id").primaryKey(),

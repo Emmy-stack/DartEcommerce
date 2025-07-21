@@ -102,12 +102,14 @@ export class DatabaseStorage implements IStorage {
 
   // Product operations
   async getProducts(categoryId?: number): Promise<Product[]> {
-    const query = db.select().from(products).where(eq(products.isApproved, true));
     if (categoryId) {
-      return await query.where(and(eq(products.isApproved, true), eq(products.categoryId, categoryId)))
+      return await db.select().from(products)
+        .where(and(eq(products.isApproved, true), eq(products.categoryId, categoryId)))
         .orderBy(desc(products.createdAt));
     }
-    return await query.orderBy(desc(products.createdAt));
+    return await db.select().from(products)
+      .where(eq(products.isApproved, true))
+      .orderBy(desc(products.createdAt));
   }
 
   async getProduct(id: number): Promise<Product | undefined> {
@@ -161,9 +163,10 @@ export class DatabaseStorage implements IStorage {
     const [newFavorite] = await db.insert(favorites).values(favorite).returning();
     
     // Update favorite count
+    const count = await db.select({ count: favorites.id }).from(favorites).where(eq(favorites.productId, favorite.productId));
     await db
       .update(products)
-      .set({ favoriteCount: db.select().from(favorites).where(eq(favorites.productId, favorite.productId)) })
+      .set({ favoriteCount: count.length })
       .where(eq(products.id, favorite.productId));
     
     return newFavorite;
@@ -174,9 +177,10 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(favorites.userId, userId), eq(favorites.productId, productId)));
     
     // Update favorite count
+    const count = await db.select({ count: favorites.id }).from(favorites).where(eq(favorites.productId, productId));
     await db
       .update(products)
-      .set({ favoriteCount: db.select().from(favorites).where(eq(favorites.productId, productId)) })
+      .set({ favoriteCount: count.length })
       .where(eq(products.id, productId));
   }
 
@@ -204,7 +208,7 @@ export class DatabaseStorage implements IStorage {
       // Update quantity
       const [updatedItem] = await db
         .update(cartItems)
-        .set({ quantity: existingItem.quantity + (cartItem.quantity || 1) })
+        .set({ quantity: (existingItem.quantity || 0) + (cartItem.quantity || 1) })
         .where(eq(cartItems.id, existingItem.id))
         .returning();
       return updatedItem;
